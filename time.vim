@@ -63,10 +63,48 @@ function! time#Date()
     return l:date
 endfunction
 
+function! s:CalculateTime(start, end)
+python << EOF
+from datetime import datetime
+import vim
+
+def parseDate(date):
+    return datetime.strptime(date, "%Y-%m-%d %H:%M")
+
+start = vim.eval("a:start")
+end = vim.eval("a:end")
+
+seconds = (parseDate(end) - parseDate(start)).seconds
+
+vim.command("let l:seconds = " + str(seconds))
+EOF
+
+    return l:seconds
+endfunction
+
 " Calculate the time difference from a date-row
 function! time#DateDifference()
-    let l:winvivew = winsaveview()
+    let l:winview = winsaveview()
     let l:temp = @a
+
+    normal ^f[
+
+    let l:start = time#Date()
+
+    normal f[
+
+    let l:end = time#Date()
+
+    let l:seconds = s:CalculateTime(l:start, l:end)
+
+    let l:totalMinutes = floor(l:seconds / 60.0)
+
+    let l:hours = floor(l:totalMinutes / 60.0)
+    let l:minutes = l:totalMinutes - (l:hours * 60)
+
+    let l:formatted = printf("%02d:%02d", float2nr(l:hours), float2nr(l:minutes))
+
+    execute "normal A: " . l:formatted
 
     let @a = l:temp
     call winrestview(l:winview)
