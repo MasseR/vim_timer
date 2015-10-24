@@ -1,11 +1,12 @@
 " Stop tracking time for any task
 function! time#End()
     let l:winview = winsaveview()
-
     try
         execute "normal! gg" . "/  TIME: [\\d\\{4\\}-\\d\\{2\\}-\\d\\{2\\} \\d\\{2\\}:\\d\\{2\\}\\]$" . "\<cr>"
 
         execute "normal A--" . time#CurrentTime()
+
+        call time#TimeDifference()
 
     catch /Pattern not found/
         echom "No running timer"
@@ -26,30 +27,14 @@ function! time#Start()
     call winrestview(l:winview)
 endfunction
 
-" Stop tracking time for any task
-function! time#End()
-    let l:winview = winsaveview()
-
-    try
-        execute "normal! gg" . "/  TIME: [\\d\\{4\\}-\\d\\{2\\}-\\d\\{2\\} \\d\\{2\\}:\\d\\{2\\}\\]$" . "\<cr>"
-
-        execute "normal A--" . time#CurrentTime()
-
-    catch /Pattern not found/
-        echom "No running timer"
-    endtry
-
-    call winrestview(l:winview)
-endfunction
-
-" Return a formatted date string
+"rReturn a formatted date string
 function! time#CurrentTime()
     return "[" . strftime("%Y-%m-%d %H:%M") . "]"
 endfunction
 
 
 " Get the formatted time string from under the cursor
-function! time#Date()
+function! time#Time()
     let l:winview = winsaveview()
     let l:temp = @a
 
@@ -68,13 +53,13 @@ python << EOF
 from datetime import datetime
 import vim
 
-def parseDate(date):
+def parseTime(date):
     return datetime.strptime(date, "%Y-%m-%d %H:%M")
 
 start = vim.eval("a:start")
 end = vim.eval("a:end")
 
-seconds = (parseDate(end) - parseDate(start)).seconds
+seconds = (parseTime(end) - parseTime(start)).seconds
 
 vim.command("let l:seconds = " + str(seconds))
 EOF
@@ -83,17 +68,17 @@ EOF
 endfunction
 
 " Calculate the time difference from a date-row
-function! time#DateDifference()
+function! time#TimeDifference()
     let l:winview = winsaveview()
     let l:temp = @a
 
     normal ^f[
 
-    let l:start = time#Date()
+    let l:start = time#Time()
 
     normal f[
 
-    let l:end = time#Date()
+    let l:end = time#Time()
 
     let l:seconds = s:CalculateTime(l:start, l:end)
 
