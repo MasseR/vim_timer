@@ -6,7 +6,7 @@ function! time#End()
 
         execute "normal A--" . time#CurrentTime()
 
-        call time#TimeDifference()
+        execute "normal A:" . time#FormatTime(time#TimeDifference())
 
     catch /Pattern not found/
         echom "No running timer"
@@ -67,6 +67,17 @@ EOF
     return l:seconds
 endfunction
 
+function! time#FormatTime(seconds)
+    let l:totalMinutes = floor(a:seconds / 60.0)
+
+    let l:hours = floor(l:totalMinutes / 60.0)
+    let l:minutes = l:totalMinutes - (l:hours * 60)
+
+    let l:formatted = printf("%02d:%02d", float2nr(l:hours), float2nr(l:minutes))
+
+    return l:formatted
+endfunction
+
 " Calculate the time difference from a date-row
 function! time#TimeDifference()
     let l:winview = winsaveview()
@@ -82,15 +93,70 @@ function! time#TimeDifference()
 
     let l:seconds = s:CalculateTime(l:start, l:end)
 
-    let l:totalMinutes = floor(l:seconds / 60.0)
-
-    let l:hours = floor(l:totalMinutes / 60.0)
-    let l:minutes = l:totalMinutes - (l:hours * 60)
-
-    let l:formatted = printf("%02d:%02d", float2nr(l:hours), float2nr(l:minutes))
-
-    execute "normal A: " . l:formatted
-
     let @a = l:temp
+    call winrestview(l:winview)
+
+    return l:seconds
+endfunction
+
+function! time#CollectTimes()
+    let l:winview = winsaveview()
+
+    let l:dict = {}
+
+    normal gg
+
+    let l:matchDate = strftime("[%Y-%m-%d ")
+    let l:regex = l:matchDate . "\\d\\{2\\}:\\d\\{2\\}\\]--"
+
+    while(search(regex, "W") > 0)
+        let l:temp = winsaveview()
+
+        call search("^- ", "b")
+        let l:key = getline(".")
+
+        call winrestview(l:temp)
+
+        let l:current = time#TimeDifference()
+
+        if has_key(l:dict, l:key)
+            let l:dict[l:key] = l:dict[l:key] + l:current
+        else
+            let l:dict[l:key] = l:current
+        endif
+    endwhile
+
+
+    call winrestview(l:winview)
+
+    return l:dict
+endfunction
+
+function! time#FormatTimes(dict)
+    let l:strings = []
+    let l:total = 0
+
+    for l:part in items(a:dict)
+        let [l:key, l:seconds] = l:part
+        if l:seconds > 0
+            let l:total = l:total + l:seconds
+            call add(l:strings, l:key . " => " . time#FormatTime(l:seconds))
+        endif
+    endfor
+    call add(l:strings, repeat("=", 80))
+    call add(l:strings, "Total => " . time#FormatTime(l:total))
+
+    return l:strings
+endfunction
+
+function! time#Report()
+    let l:report = time#FormatTimes(time#CollectTimes())
+
+    let l:winview = winsaveview()
+
+    execute "normal! /\\%1l{{{/e\<cr>"
+    normal di{k
+    call append(".", l:report)
+
     call winrestview(l:winview)
 endfunction
