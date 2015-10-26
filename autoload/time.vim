@@ -136,8 +136,11 @@ function! time#FormatTimes(dict)
     let l:strings = []
     let l:total = 0
 
-    for l:part in items(a:dict)
-        let [l:key, l:seconds] = l:part
+    let l:keys = keys(a:dict)
+    let l:keys = sort(l:keys)
+
+    for l:key in l:keys
+        let l:seconds = get(a:dict, l:key)
         if l:seconds > 0
             let l:total = l:total + l:seconds
             call add(l:strings, l:key . " => " . time#FormatTime(l:seconds))
